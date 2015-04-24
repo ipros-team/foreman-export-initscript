@@ -33,6 +33,33 @@ USERNAME=<%= user %>
 # and status_of_proc is working.
 [ -r /lib/lsb/init-functions ] &&. /lib/lsb/init-functions
 
+log_end_msglog_daemon_msg()
+{
+  if [ -z "$1" ]; then
+  return 1
+  fi
+
+  if [ -z "$2" ]; then
+  echo -n "$1:"
+  return
+  fi
+
+  echo -n "$1: $2"
+}
+
+log_end_msg()
+{
+  [ -z "$1" ] && return 1
+
+  if [ $1 -eq 0 ]; then
+  echo " ."
+  else
+  echo " failed!"
+  fi
+
+  return $1
+}
+
 #
 # Function that starts the daemon/service
 #
@@ -43,15 +70,13 @@ do_start()
 	chown $USERNAME: <%= log %>
 	# START APPLICATION: <%= app %>
 	<% engine.each_process do |name, process| %>
-		# START PROCESS: <%= name %>
-		<% 1.upto(engine.formation[name]) do |num| %>
-			# START CONCURRENT: <%= num %>
-				# Start: <%= app %>.<%= name %>.<%= num %>
-				# Create $PIDDIR/<%= name %>.<%= num %>.pid
-				su - $USERNAME -c 'cd <%= engine.root %>; export PORT=<%= engine.port_for(process, num) %>;<% engine.environment.each_pair do |var,env| %> export <%= var.upcase %>=<%= env %>; <% end %> <%= process.command %> >> <%= log %>/<%=name%>-<%=num%>.log 2>&1 & echo $!' > $PIDDIR/<%= name %>.<%= num %>.pid
-		<% end %>
+    <% 1.upto(engine.formation[name]) do |num| %>
+      # START CONCURRENT: <%= num %>    
+        # Start: <%= app %>.<%= name %>.<%= num %>    
+        # Create $PIDDIR/<%= name %>.<%= num %>.pid   
+        su - $USERNAME -c 'cd <%= engine.root %>; export PORT=<%= engine.port_for(process, num) %>;<% engine.environment.each_pair do |var,env| %> export <%= var.upcase %>=<%= env %>; <% end %> <%= process.command %> >> <%= log %>/<%=name%>-<%=num%>.log 2>&1 & echo $!' > $PIDDIR/<%= name %>.<%= num %>.pid
+    <% end %>
 	<% end %>
-
 }
 
 #
@@ -70,6 +95,7 @@ do_stop()
 		<% end %>
 	<% end %>
 	rmdir $PIDDIR
+	sleep <%= engine.processes.size * 10 %>
 }
 
 case "$1" in

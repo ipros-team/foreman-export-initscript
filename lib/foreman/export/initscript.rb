@@ -24,9 +24,10 @@ class Foreman::Export::Initscript < Foreman::Export::Base
     path = File.read(matchers.detect { |m| File.exists?(m) })
     compiled = ERB.new(path).result(binding)
     write_file "#{app}", compiled
-    FileUtils.chmod(755, "#{app}")
-#    path = export_template name
-#    write_template "initscript/master.erb", "#{app}", binding
+    script_path = location + "/" + app
+    FileUtils.chmod(0755, script_path)
+    system("chkconfig --add #{app}") rescue error("Could not create: #{log}")
+
    end
 
 end
